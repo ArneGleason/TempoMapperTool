@@ -3,8 +3,15 @@ import { useView } from '../../contexts/ViewContext';
 import { usePlayer } from '../../contexts/PlayerContext';
 
 const TimelineRuler = () => {
-    const { pixelsPerSecond, totalDuration } = useView();
+    const { pixelsPerBeat, totalDuration } = useView();
     const { tempo, startMarkerTime, setStartMarkerTime, setCurrentTime } = usePlayer();
+
+    // Derived: Seconds per Beat
+    const spb = 60 / tempo;
+    // Derived: Pixels per Second (This is now variable based on tempo!)
+    // pixelsPerBeat = pixelsPerSecond * spb
+    // => pixelsPerSecond = pixelsPerBeat / spb
+    const pixelsPerSecond = pixelsPerBeat / spb;
 
     const minTickSpacing = 50;
 
@@ -24,15 +31,16 @@ const TimelineRuler = () => {
     }
 
     // --- Musical Scale ---
-    const spb = 60 / tempo;
-    const ppb = spb * pixelsPerSecond;
+    // beats = time / spb
+    // pixels = beats * pixelsPerBeat
 
+    // We want ticks at fixed musical intervals (1 bar = 4 beats)
     const beatInterval = useMemo(() => {
-        if (ppb * 1 >= minTickSpacing) return 1;
-        if (ppb * 4 >= minTickSpacing) return 4;
-        if (ppb * 8 >= minTickSpacing) return 8;
+        // Check pixel width of 1 beat
+        if (pixelsPerBeat >= minTickSpacing) return 1;
+        if (pixelsPerBeat * 4 >= minTickSpacing) return 4;
         return 16;
-    }, [ppb]);
+    }, [pixelsPerBeat]);
 
     const musicalTicks = [];
     const totalBeats = totalDuration / spb;
@@ -116,7 +124,7 @@ const TimelineRuler = () => {
                 {musicalTicks.map(b => (
                     <div key={`mus-${b}`} style={{
                         position: 'absolute',
-                        left: `${b * spb * pixelsPerSecond}px`,
+                        left: `${b * pixelsPerBeat}px`, // Use pixelsPerBeat directly
                         paddingLeft: '4px',
                         borderLeft: '1px solid #555',
                         height: '100%',

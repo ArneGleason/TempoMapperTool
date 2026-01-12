@@ -72,15 +72,19 @@ const ProjectTimeline = () => {
           // ... (keep existing)
           if (track.type === 'TEMPO') {
             return (
-              <TrackLane key={track.id} title={track.title} height={track.height} color={track.color}>
-                <TempoLane />
-              </TrackLane>
+              <TempoLane key={track.id} />
             );
           }
           if (track.type === 'AUDIO') {
             return (
-              <TrackLane key={track.id} title={track.title} height={track.height} color={track.color}>
-                <Waveform src={track.src} />
+              <TrackLane
+                key={track.id}
+                id={track.id}
+                title={track.title}
+                color={track.color}
+                height={track.height}
+              >
+                <Waveform src={track.src} sensitivity={track.transientSensitivity || 1.0} />
               </TrackLane>
             );
           }

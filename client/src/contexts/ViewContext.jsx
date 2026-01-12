@@ -3,7 +3,7 @@ import React, { createContext, useContext, useState, useRef } from 'react';
 const ViewContext = createContext();
 
 export const ViewProvider = ({ children }) => {
-    const [pixelsPerSecond, setPixelsPerSecond] = useState(100); // Default zoom
+    const [pixelsPerBeat, setPixelsPerBeat] = useState(25); // Default zoom: 25px per beat (100px per bar)
     const [totalDuration, setTotalDuration] = useState(10); // Default 10s, will grow dynamically
     const scrollContainerRef = useRef(null); // Ref to the main scrolling div
 
@@ -16,8 +16,8 @@ export const ViewProvider = ({ children }) => {
 
     return (
         <ViewContext.Provider value={{
-            pixelsPerSecond,
-            setPixelsPerSecond,
+            pixelsPerBeat,
+            setPixelsPerBeat,
             totalDuration,
             setTotalDuration,
             scrollContainerRef,

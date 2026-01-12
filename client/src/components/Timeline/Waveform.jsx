@@ -2,12 +2,17 @@ import React, { useEffect, useRef, useState } from 'react';
 import WaveSurfer from 'wavesurfer.js';
 import { usePlayer } from '../../contexts/PlayerContext';
 import { useView } from '../../contexts/ViewContext';
+import WarpedWaveform from './WarpedWaveform';
 
-const Waveform = ({ src }) => {
+const Waveform = ({ src, sensitivity = 1.0 }) => {
     const containerRef = useRef(null);
     const wavesurferRef = useRef(null);
-    const { isPlaying, currentTime, setCurrentTime, setClockSource } = usePlayer();
-    const { pixelsPerSecond, totalDuration, setTotalDuration } = useView();
+    const { isPlaying, currentTime, setCurrentTime, setClockSource, tempo } = usePlayer();
+    const { pixelsPerBeat, totalDuration, setTotalDuration } = useView();
+
+    // Derived pps
+    const spb = 60 / tempo;
+    const pixelsPerSecond = pixelsPerBeat / spb;
 
     const [audioDuration, setAudioDuration] = useState(0);
 
@@ -145,6 +150,15 @@ const Waveform = ({ src }) => {
             className="waveform-wrapper"
             style={{
                 width: audioDuration > 0 ? `${audioDuration * pixelsPerSecond}px` : '100%',
+                // Note: The width above is linear-time based. 
+                // WarpedWaveform will render based on beats. 
+                // If Warped is wider/narrower, we need to handle it.
+                // Ideally we let WarpedWaveform dictate width?
+                // But container needs to be sized.
+
+                // For now, let's just make it large enough or overflow visible?
+                // Actually WarpedWaveform should just position absolutely?
+
                 height: '100%',
                 position: 'relative',
                 overflow: 'hidden'
@@ -156,12 +170,23 @@ const Waveform = ({ src }) => {
                     width: '100%', height: '100%',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     color: 'rgba(255,255,255,0.2)', pointerEvents: 'none',
-                    border: '2px dashed rgba(255,255,255,0.1)'
+                    border: '2px dashed rgba(255,255,255,0.1)',
+                    zIndex: 2
                 }}>
                     No Audio Loaded
                 </div>
             )}
-            <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
+
+            {/* WaveSurfer (Hidden - for Playback/Clock) */}
+            <div ref={containerRef} style={{ width: '100%', height: '100%', opacity: 0, visibility: 'hidden', position: 'absolute' }} />
+
+            {/* Visual Warped Layer */}
+            {src && (
+                <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 1 }}>
+                    {/* We pass height specifically? */}
+                    <WarpedWaveform src={src} height={130} sensitivity={sensitivity} />
+                </div>
+            )}
         </div>
     );
 };

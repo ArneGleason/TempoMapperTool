@@ -1,13 +1,24 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useProject } from './ProjectContext';
 
 const PlayerContext = createContext();
 
 export const PlayerProvider = ({ children }) => {
+    const { tempoSettings } = useProject(); // Access tempo settings
     const [isPlaying, setIsPlaying] = useState(false);
     const [currentTime, setCurrentTime] = useState(0); // in seconds
     const [startMarkerTime, setStartMarkerTime] = useState(0);
     const [tempo, setTempo] = useState(120);
     const [clockSource, setClockSource] = useState('internal');
+
+    // Sync tempo from project settings (initial tempo for now)
+    useEffect(() => {
+        if (tempoSettings && tempoSettings.points.length > 0) {
+            // Simply take the first point's value as the global tempo for now
+            // Future: Support variable tempo map playback
+            setTempo(tempoSettings.points[0].value);
+        }
+    }, [tempoSettings]);
 
     const togglePlay = () => setIsPlaying(prev => !prev);
 

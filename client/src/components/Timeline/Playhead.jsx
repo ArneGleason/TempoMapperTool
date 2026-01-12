@@ -6,8 +6,12 @@ const Playhead = () => {
     // We subscribe to currentTime. 
     // In a high-perf app we might move the DOM directly via ref in the loop, 
     // but for now React state update loop (approx 60fps via context) is okay for MVP phase.
-    const { currentTime, isPlaying } = usePlayer();
-    const { pixelsPerSecond } = useView();
+    const { currentTime, isPlaying, tempo } = usePlayer();
+    const { pixelsPerBeat } = useView();
+
+    // Derived pps
+    const spb = 60 / tempo;
+    const pixelsPerSecond = pixelsPerBeat / spb;
 
     const left = currentTime * pixelsPerSecond;
 

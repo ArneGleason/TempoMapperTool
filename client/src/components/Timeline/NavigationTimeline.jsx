@@ -6,15 +6,24 @@ import WaveSurfer from 'wavesurfer.js';
 
 const NavigationTimeline = () => {
     const {
-        pixelsPerSecond,
-        setPixelsPerSecond,
+        pixelsPerBeat,
+        setPixelsPerBeat,
         totalDuration,
         scrollContainerRef,
         setScroll
     } = useView();
 
     const { tracks } = useProject();
-    const { currentTime } = usePlayer();
+    const { currentTime, tempo } = usePlayer();
+
+    // Derived pps
+    const spb = 60 / tempo;
+    const pixelsPerSecond = pixelsPerBeat / spb;
+
+    // Helper to set PPS by converting to PPB
+    const setPixelsPerSecond = (newPPS) => {
+        setPixelsPerBeat(newPPS * spb);
+    };
 
     const [viewport, setViewport] = useState({ left: 0, width: 100 });
 
