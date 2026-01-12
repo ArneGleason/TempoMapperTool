@@ -184,7 +184,14 @@ const TempoLane = () => {
         setGhostPoint(null);
     };
 
-    const handleGlobalMouseUp = () => {
+    const handleGlobalMouseUp = (e) => {
+        if (dragState && dragState.deferredToggle) {
+            const dist = Math.hypot(e.clientX - dragState.startX, e.clientY - dragState.startY);
+            if (dist < 3) {
+                // It was a click (no drag). Execute the deferred toggle (Deselect).
+                toggleSelectionItem('TEMPO_POINT', dragState.pointId);
+            }
+        }
         setDragState(null);
         setLassoStart(null);
         setLassoRect(null);
@@ -192,6 +199,10 @@ const TempoLane = () => {
 
     // SVG Background Click
     const handleSvgMouseDown = (e) => {
+        e.stopPropagation(); // Prevent bubbling to TrackLane
+        // Prevent clearing selection if clicking a child (like a point)
+        if (e.target !== e.currentTarget) return;
+
         if (!ghostPoint && !dragState) {
             if (!e.shiftKey && !e.ctrlKey) {
                 clearSelection();
@@ -202,6 +213,7 @@ const TempoLane = () => {
     };
 
     const handleSvgClick = (e) => {
+        e.stopPropagation(); // Prevent bubbling to TrackLane
         if (!dragState && !lassoStart && !lassoRect && ghostPoint) {
             const exists = points.some(p => Math.abs(p.bar - ghostPoint.bar) < 0.001);
             if (!exists) {
@@ -216,10 +228,28 @@ const TempoLane = () => {
         const point = points.find(p => p.id === pointId);
         if (!point) return;
 
+        let action = 'NONE';
+
+        // logic:
+        // shift + selected -> defer toggle (wait for drag check)
+        // shift + unselected -> select (add)
+        // no shift + selected -> keep selected (drag group)
+        // no shift + unselected -> select (replace)
+
         if (e.shiftKey) {
-            toggleSelectionItem('TEMPO_POINT', pointId);
+            if (selection.ids.includes(pointId)) {
+                // Defer deselect to mouse up if no drag
+                action = 'DEFER_TOGGLE';
+            } else {
+                toggleSelectionItem('TEMPO_POINT', pointId);
+            }
         } else {
-            if (!selection.ids.includes(pointId)) {
+            if (selection.ids.includes(pointId)) {
+                // If clicking an already selected item (likely in a group), 
+                // defer becoming the *only* selection until MouseUp (if no drag).
+                // This allows dragging the whole group.
+                action = 'DEFER_SINGLE';
+            } else {
                 selectItem('TEMPO_POINT', pointId);
             }
         }
@@ -229,10 +259,20 @@ const TempoLane = () => {
         // It's safer to rely on 'willBeSelected' logic
         let willBeIds = selection.ids;
         if (e.shiftKey) {
-            if (selection.ids.includes(pointId)) willBeIds = selection.ids.filter(i => i !== pointId);
-            else willBeIds = [...selection.ids, pointId];
+            if (selection.ids.includes(pointId)) {
+                willBeIds = selection.ids;
+            } else {
+                willBeIds = [...selection.ids, pointId];
+            }
         } else {
-            if (!selection.ids.includes(pointId)) willBeIds = [pointId];
+            // If Single Select (Immediate OR Deferred), we conceptually treat it as "Included" for the drag group.
+            // If Deferred, willBeIds remains [Group].
+            // If Immediate (New Select), willBeIds becomes [Point].
+            if (selection.ids.includes(pointId)) {
+                willBeIds = selection.ids; // Keep group for drag
+            } else {
+                willBeIds = [pointId];
+            }
         }
 
         const startValues = {};
@@ -279,7 +319,9 @@ const TempoLane = () => {
             startX: e.clientX,
             startY: e.clientY,
             startValues,
-            constraints: { minDelta, maxDelta }
+            constraints: { minDelta, maxDelta },
+            deferredToggle: action === 'DEFER_TOGGLE',
+            deferredSingle: action === 'DEFER_SINGLE'
         });
     };
 
@@ -370,6 +412,7 @@ const TempoLane = () => {
                     <path
                         d={pathD}
                         fill="none" stroke="#00befc" strokeWidth="3"
+                        strokeOpacity={0.25}
                         style={{ pointerEvents: 'none' }}
                     />
 
@@ -399,6 +442,7 @@ const TempoLane = () => {
                                     strokeWidth={2}
                                     style={{ cursor: 'move' }}
                                     onMouseDown={(e) => handlePointMouseDown(e, p.id)}
+                                    onClick={(e) => e.stopPropagation()}
                                 />
                             </g>
                         );

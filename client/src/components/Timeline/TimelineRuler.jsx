@@ -82,7 +82,7 @@ const TimelineRuler = () => {
             className="timeline-ruler"
             onClick={handleRulerClick}
             style={{
-                height: '40px',
+                height: '20px',
                 minWidth: `${totalDuration * pixelsPerSecond}px`,
                 backgroundColor: '#222',
                 borderBottom: '1px solid #444',
@@ -120,7 +120,7 @@ const TimelineRuler = () => {
             </div>
 
             {/* Top Row: Musical Bars */}
-            <div style={{ height: '20px', position: 'relative', borderBottom: '1px solid #333' }}>
+            <div style={{ height: '20px', position: 'relative' }}>
                 {musicalTicks.map(b => (
                     <div key={`mus-${b}`} style={{
                         position: 'absolute',
@@ -133,24 +133,6 @@ const TimelineRuler = () => {
                         pointerEvents: 'none'
                     }}>
                         {formatMusical(b)}
-                    </div>
-                ))}
-            </div>
-
-            {/* Bottom Row: Time */}
-            <div style={{ height: '20px', position: 'relative' }}>
-                {timeTicks.map(t => (
-                    <div key={`time-${t}`} style={{
-                        position: 'absolute',
-                        left: `${t * pixelsPerSecond}px`,
-                        paddingLeft: '4px',
-                        borderLeft: '1px solid #444',
-                        height: '50%',
-                        bottom: 0,
-                        whiteSpace: 'nowrap',
-                        pointerEvents: 'none'
-                    }}>
-                        {formatTime(t)}
                     </div>
                 ))}
             </div>
