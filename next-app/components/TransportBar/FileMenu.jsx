@@ -1,3 +1,4 @@
+'use client';
 import React, { useState, useEffect, useRef } from 'react';
 import { useProjectActions } from '../../logic/ProjectActions';
 import { useProject } from '../../contexts/ProjectContext';
@@ -26,7 +27,7 @@ const FileMenu = () => {
     // Fetch recents and projects when menu opens
     useEffect(() => {
         if (isOpen) {
-            fetch('http://localhost:3001/api/projects/recent')
+            fetch('/api/projects/recent')
                 .then(res => res.json())
                 .then(data => setRecents(data))
                 .catch(console.error);
@@ -45,6 +46,29 @@ const FileMenu = () => {
         if (action === 'NEW') {
             const shouldCreate = await dialog.confirm('Create new project? Unsaved changes will be lost.', 'New Project');
             if (shouldCreate) window.location.reload();
+        }
+        else if (action === 'OPEN') {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            input.onchange = async (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    try {
+                        const text = await file.text();
+                        const data = JSON.parse(text);
+                        // If lacking name, use filename
+                        if (!data.name) {
+                            data.name = file.name.replace('.tmt.json', '').replace('.json', '');
+                        }
+                        loadProjectState(data);
+                    } catch (err) {
+                        console.error(err);
+                        dialog.alert('Failed to parse project file', 'Error');
+                    }
+                }
+            };
+            input.click();
         }
         else if (action === 'SAVE') {
             let nameToSave = projectName;
@@ -147,7 +171,7 @@ const FileMenu = () => {
                     <div style={{ padding: '4px 12px', fontSize: '10px', color: '#666', fontWeight: 'bold' }}>RECENT PROJECTS</div>
                     {recents.length === 0 && <div style={{ padding: '4px 12px', fontSize: '12px', color: '#555' }}>No recent projects</div>}
                     {recents.map((p, i) => (
-                        <MenuItem key={i} onClick={() => handleAction(`OPEN_RECENT:${p.path} `)}>
+                        <MenuItem key={i} onClick={() => handleAction(`OPEN_RECENT:${p.path}`)}>
                             <div style={{ display: 'flex', flexDirection: 'column' }}>
                                 <span>{p.name}</span>
                                 <span style={{ fontSize: '10px', color: '#666' }}>{p.path}</span>

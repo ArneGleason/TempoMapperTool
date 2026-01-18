@@ -1,6 +1,8 @@
 import React from 'react';
 import { usePlayer } from '../../contexts/PlayerContext';
+import { useProject } from '../../contexts/ProjectContext';
 import FileMenu from './FileMenu';
+import ToolsMenu from './ToolsMenu';
 import { useProjectActions } from '../../logic/ProjectActions'; // Wrapper for actions
 
 const Button = ({ onClick, children, active, color = "#cccccc" }) => (
@@ -36,6 +38,7 @@ const Icons = {
 
 const TransportBar = () => {
     const { isPlaying, togglePlay, stop, currentTime, tempo } = usePlayer();
+    const { projectName } = useProject();
 
     // Format time as M:S:ms
     const minutes = Math.floor(currentTime / 60);
@@ -62,6 +65,7 @@ const TransportBar = () => {
         }}>
             <div className="left-controls" style={{ display: 'flex', gap: '4px' }}>
                 <FileMenu />
+                <ToolsMenu />
                 <div style={{ width: '1px', height: '20px', background: 'var(--border-light)', margin: '0 8px' }}></div>
 
                 <Button onClick={stop}><Icons.Stop /></Button>
@@ -75,6 +79,14 @@ const TransportBar = () => {
                 display: 'flex',
                 gap: '10px'
             }}>
+                <div style={{
+                    color: '#aaa',
+                    fontSize: '14px',
+                    fontWeight: 'bold',
+                    marginRight: '10px'
+                }}>
+                    {projectName}
+                </div>
                 <div style={{
                     backgroundColor: '#111',
                     padding: '4px 12px',

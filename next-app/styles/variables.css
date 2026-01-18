@@ -1,0 +1,68 @@
+* {
+  box-sizing: border-box;
+}
+
+:root {
+  /* DAW Theme Colors */
+  --bg-app: #1e1e1e;
+  /* Main background */
+  --bg-header: #2d2d2d;
+  /* Top Transport bar */
+  --bg-panel: #252526;
+  /* Inspector / Sidebars */
+  --bg-track: #1a1a1a;
+  /* Track Lane background */
+  --bg-timeline: #111111;
+  /* The grid area */
+
+  --border-light: #3e3e3e;
+  /* Divider lines */
+
+  /* Accents */
+  --accent-selection: #3a3d41;
+  --text-main: #cccccc;
+  --text-bright: #ffffff;
+
+  /* Specific Track Colors */
+  --color-tempo-lane: #2d3e50;
+  /* Dark Blue background for tempo */
+  --color-tempo-line: #00befc;
+  /* Bright Blue line */
+  --color-audio-wave: #e8c64d;
+  /* Golden/Yellow for waveform */
+
+  /* Spacing */
+  --header-height: 50px;
+  --inspector-width: 250px;
+  --track-header-width: 200px;
+}
+
+body {
+  background-color: var(--bg-app);
+  color: var(--text-main);
+  font-family: 'Segoe UI', 'Inter', sans-serif;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  user-select: none;
+  /* DAW-feel: prevent text selection on drag */
+}
+
+/* Scrollbars */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: #1e1e1e;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #424242;
+  border-radius: 2px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #4f4f4f;
+}

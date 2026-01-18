@@ -6,8 +6,8 @@ import { useProject } from '../../contexts/ProjectContext'; // Add Import
 
 const TimelineRuler = () => {
     const { pixelsPerBeat, totalDuration } = useView();
-    const { tempo, startMarkerTime, setStartMarkerTime, setCurrentTime } = usePlayer();
-    const { rangeSelection, setRangeSelection } = useProject(); // Consume Context
+    const { tempo, startMarkerTime, setStartMarkerTime, setCurrentTime, timeSignature } = usePlayer();
+    const { rangeSelection, setRangeSelection } = useProject();
 
     // Derived values...
     const spb = 60 / tempo;
@@ -15,9 +15,11 @@ const TimelineRuler = () => {
 
     const minTickSpacing = 50;
 
-    // ... (Existing timeInterval and beatInterval logic - omitted for brevity, will be kept by tool if I carefully target only needed parts or replace whole function if I must re-structure)
-    // Actually, to implement Drag properly I should probably replace the component body or significant parts.
-    // Let's re-write the component body to be safe and clean.
+    // Ruler Grid Logic
+    // Bars depend on Time Signature: Numerator * (4/Denominator) Quarter Notes per Bar.
+    // pixelsPerBeat is Pixels Per Quarter Note.
+    const beatsPerBarQN = timeSignature.numerator * (4 / timeSignature.denominator);
+    const barIntervalPx = beatsPerBarQN * pixelsPerBeat;
 
     const timeInterval = useMemo(() => {
         const rawInterval = minTickSpacing / pixelsPerSecond;
@@ -31,23 +33,18 @@ const TimelineRuler = () => {
         timeTicks.push(t);
     }
 
-    const beatInterval = useMemo(() => {
-        if (pixelsPerBeat >= minTickSpacing) return 1;
-        if (pixelsPerBeat * 4 >= minTickSpacing) return 4;
-        return 16;
-    }, [pixelsPerBeat]);
-
+    // Calculate Bar Positions
     const musicalTicks = [];
-    const totalBeats = totalDuration / spb;
-    for (let b = 0; b <= totalBeats; b += beatInterval) {
+    // Total Bars
+    const totalBars = totalDuration / (beatsPerBarQN * spb);
+
+    // We only draw Bar Lines for now to avoid clutter
+    for (let b = 0; b <= totalBars; b++) {
         musicalTicks.push(b);
     }
 
-    const formatMusical = (beats) => {
-        const bar = Math.floor(beats / 4) + 1;
-        const beat = (beats % 4) + 1;
-        if (beatInterval === 1) return `${bar}.${beat}`;
-        return `${bar}`;
+    const formatMusical = (barIndex) => {
+        return `${barIndex + 1}`;
     };
 
     // --- Interaction ---
@@ -169,7 +166,7 @@ const TimelineRuler = () => {
                 {musicalTicks.map(b => (
                     <div key={`mus-${b}`} style={{
                         position: 'absolute',
-                        left: `${b * pixelsPerBeat}px`,
+                        left: `${b * barIntervalPx}px`,
                         paddingLeft: '4px',
                         borderLeft: '1px solid #555',
                         height: '100%',

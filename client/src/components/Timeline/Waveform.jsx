@@ -4,7 +4,7 @@ import { usePlayer } from '../../contexts/PlayerContext';
 import { useView } from '../../contexts/ViewContext';
 import WarpedWaveform from './WarpedWaveform';
 
-const Waveform = ({ src, sensitivity = 1.0 }) => {
+const Waveform = ({ src, sensitivity = 1.0, offset = 0 }) => {
     const containerRef = useRef(null);
     const wavesurferRef = useRef(null);
     const { isPlaying, currentTime, setCurrentTime, setClockSource, tempo } = usePlayer();
@@ -13,6 +13,10 @@ const Waveform = ({ src, sensitivity = 1.0 }) => {
     // Derived pps
     const spb = 60 / tempo;
     const pixelsPerSecond = pixelsPerBeat / spb;
+
+    // Calculate visual offset in pixels
+    const offsetPixels = offset * pixelsPerSecond;
+
 
     const [audioDuration, setAudioDuration] = useState(0);
 
@@ -150,15 +154,7 @@ const Waveform = ({ src, sensitivity = 1.0 }) => {
             className="waveform-wrapper"
             style={{
                 width: audioDuration > 0 ? `${audioDuration * pixelsPerSecond}px` : '100%',
-                // Note: The width above is linear-time based. 
-                // WarpedWaveform will render based on beats. 
-                // If Warped is wider/narrower, we need to handle it.
-                // Ideally we let WarpedWaveform dictate width?
-                // But container needs to be sized.
-
-                // For now, let's just make it large enough or overflow visible?
-                // Actually WarpedWaveform should just position absolutely?
-
+                marginLeft: `${offsetPixels}px`, // Apply Offset
                 height: '100%',
                 position: 'relative',
                 overflow: 'hidden'

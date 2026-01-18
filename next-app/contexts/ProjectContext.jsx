@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+'use client';
+import React, { createContext, useContext, useState, useRef, useEffect } from 'react';
 
 const ProjectContext = createContext();
 
@@ -53,6 +54,7 @@ export const ProjectProvider = ({ children }) => {
 
     // --- Tempo Map Logic ---
     const addTempoPoint = (bar, value) => {
+        pushUndoSnapshot();
         const newPoint = {
             id: `pt-${Date.now()}`,
             bar,
@@ -61,7 +63,7 @@ export const ProjectProvider = ({ children }) => {
         // Insert and Sort
         const newPoints = [...tempoSettings.points, newPoint].sort((a, b) => a.bar - b.bar);
         setTempoSettings({ ...tempoSettings, points: newPoints });
-        selectItem('TEMPO_POINT', newPoint.id); // Auto-select new point
+        selectItem('TEMPO_POINT', newPoint.id);
         return newPoint;
     };
 
@@ -72,16 +74,96 @@ export const ProjectProvider = ({ children }) => {
         }));
     };
 
+    // --- History / Undo / Redo ---
+    const [history, setHistory] = useState({ past: [], future: [] });
+
+    // Snapshot current state to history
+    const pushUndoSnapshot = () => {
+        setHistory(curr => {
+            const snapshot = {
+                tracks: JSON.parse(JSON.stringify(tracks)), // Deep clone logic for safety (Audio Files are ref, src is string - OK)
+                tempoSettings: JSON.parse(JSON.stringify(tempoSettings)),
+                projectName
+            };
+            const newPast = [...curr.past, snapshot];
+            if (newPast.length > 50) newPast.shift(); // Limit history
+
+            return {
+                past: newPast,
+                future: []
+            };
+        });
+    };
+
+    const undo = () => {
+        setHistory(curr => {
+            if (curr.past.length === 0) return curr;
+
+            const previous = curr.past[curr.past.length - 1];
+            const newPast = curr.past.slice(0, -1);
+
+            const currentSnapshot = {
+                tracks: JSON.parse(JSON.stringify(tracks)),
+                tempoSettings: JSON.parse(JSON.stringify(tempoSettings)),
+                projectName
+            };
+
+            // Restore State
+            setTracks(previous.tracks);
+            setTempoSettings(previous.tempoSettings);
+            if (previous.projectName) setProjectName(previous.projectName);
+
+            return {
+                past: newPast,
+                future: [currentSnapshot, ...curr.future]
+            };
+        });
+    };
+
+    const redo = () => {
+        setHistory(curr => {
+            if (curr.future.length === 0) return curr;
+
+            const next = curr.future[0];
+            const newFuture = curr.future.slice(1);
+
+            const currentSnapshot = {
+                tracks: JSON.parse(JSON.stringify(tracks)),
+                tempoSettings: JSON.parse(JSON.stringify(tempoSettings)),
+                projectName
+            };
+
+            // Restore State
+            setTracks(next.tracks);
+            setTempoSettings(next.tempoSettings);
+            if (next.projectName) setProjectName(next.projectName);
+
+            return {
+                past: [...curr.past, currentSnapshot],
+                future: newFuture
+            };
+        });
+    };
+
     const deleteTempoPoint = (id) => {
-        if (id === 'init') return; // Protect initial point
+        if (id === 'init') return;
+
+        pushUndoSnapshot(); // Save
+
         setTempoSettings(prev => ({
             ...prev,
             points: prev.points.filter(p => p.id !== id)
         }));
-        // Deselect if deleted
         if (selection.type === 'TEMPO_POINT' && selection.ids.includes(id)) {
             setSelection(prev => ({ ...prev, ids: prev.ids.filter(i => i !== id) }));
         }
+    };
+
+    // Update a track's properties (e.g. offset, syncPoint)
+    const updateTrack = (trackId, updates) => {
+        setTracks(prev => prev.map(t =>
+            t.id === trackId ? { ...t, ...updates } : t
+        ));
     };
 
     const addAudioTrack = (file) => {
@@ -109,13 +191,21 @@ export const ProjectProvider = ({ children }) => {
         setTracks(prev => [...prev, newTrack]);
     };
 
-    const updateTrack = (id, updates) => {
-        setTracks(prev => prev.map(t => t.id === id ? { ...t, ...updates } : t));
-    };
+
 
     const shiftTrack = (id, offsetDelta) => {
         setTracks(prev => prev.map(t => {
             if (t.id === id) {
+                const currentOffset = t.offset || 0;
+                return { ...t, offset: currentOffset + offsetDelta };
+            }
+            return t;
+        }));
+    };
+
+    const shiftAllAudioTracks = (offsetDelta) => {
+        setTracks(prev => prev.map(t => {
+            if (t.type === 'AUDIO') {
                 const currentOffset = t.offset || 0;
                 return { ...t, offset: currentOffset + offsetDelta };
             }
@@ -136,43 +226,67 @@ export const ProjectProvider = ({ children }) => {
     // --- Keyboard Shortcuts ---
     useEffect(() => {
         const handleKeyDown = (e) => {
+            const tag = document.activeElement.tagName.toLowerCase();
+            const isInput = tag === 'input' || tag === 'textarea' || document.activeElement.isContentEditable;
+
+            // Undo / Redo
+            if ((e.ctrlKey || e.metaKey) && !isInput) {
+                if (e.key === 'z') {
+                    if (e.shiftKey) {
+                        e.preventDefault();
+                        redo();
+                    } else {
+                        e.preventDefault();
+                        undo();
+                    }
+                } else if (e.key === 'y') {
+                    e.preventDefault();
+                    redo();
+                }
+            }
+
             if (e.key === 'Delete' || e.key === 'Backspace') {
-                // Prevent if typing in an input
-                const tag = document.activeElement.tagName.toLowerCase();
-                const isInput = tag === 'input' || tag === 'textarea' || document.activeElement.isContentEditable;
                 if (isInput) return;
 
                 if (selection && selection.type === 'TEMPO_POINT' && selection.ids.length > 0) {
                     selection.ids.forEach(id => {
-                        if (id !== 'init') { // extra safety
-                            deleteTempoPoint(id);
+                        if (id !== 'init') {
+                            deleteTempoPoint(id); // Already has snapshot inside
                         }
                     });
 
-                    e.preventDefault(); // Prevent browser back nav if backspace
-                } else if (selection && selection.type === 'TRACK' && selection.ids.length > 0) {
-                    // Delete Track? User didn't ask for this yet.
-                    // selection.ids.forEach(id => {
-                    //     setTracks(prev => prev.filter(t => t.id !== id));
-                    // });
-                    // clearSelection();
+                    e.preventDefault();
                 }
             }
         };
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [selection, deleteTempoPoint]); // Re-bind if selection changes (or use Ref for selection if frequent unbind is bad. useEffect is fine)
+    }, [selection, deleteTempoPoint, undo, redo]);
+
+    // Wrap other Mutators
+    // Note: addAudioTrack is updated below via re-export, but definition is inside.
+    // I need to update the definition block if I want to wrap it.
+
+    // We can't wrap functions defined earlier unless we move them or edit them.
+    // For `shiftAllAudioTracks` (defined after undo block?), I will replace it in next call or here if it fits.
 
     return (
         <ProjectContext.Provider value={{
-            tracks, setTracks, addAudioTrack, updateTrack, shiftTrack,
+            tracks, setTracks,
+            addAudioTrack: (file) => { pushUndoSnapshot(); const url = URL.createObjectURL(file); const newTrack = { id: `audio-${Date.now()}`, title: file.name, type: 'AUDIO', color: '#e8c64d', height: '130px', src: url, file, transientSensitivity: 0.5 }; setTracks(prev => [...prev, newTrack]); if (tracks.filter(t => t.type === 'AUDIO').length === 0) setProjectName(file.name.replace(/\.[^/.]+$/, "")); },
+            updateTrack, shiftTrack,
+            shiftAllAudioTracks: (delta) => { pushUndoSnapshot(); shiftAllAudioTracks(delta); }, // Recursive? No, I need to call the original logic. 
+            // Better to export `pushUndoSnapshot` and use it in components (TempoLane, TrackLane) AND rewrite internal functions to use it.
+            pushUndoSnapshot,
+            undo, redo,
             projectName, setProjectName,
             tempoSettings, updateTempoSettings,
-            selection, setSelection, // kept for manual override if really needed
+            selection, setSelection,
             rangeSelection, setRangeSelection,
             selectItem, toggleSelectionItem, setSelectionItems, clearSelection,
-            addTempoPoint, updateTempoPoint, deleteTempoPoint
+            addTempoPoint, updateTempoPoint, deleteTempoPoint,
+            loadProjectState
         }}>
             {children}
         </ProjectContext.Provider>

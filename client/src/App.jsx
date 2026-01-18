@@ -6,6 +6,7 @@ import Waveform from './components/Timeline/Waveform'
 import { PlayerProvider } from './contexts/PlayerContext'
 import { ProjectProvider, useProject } from './contexts/ProjectContext'
 import { ViewProvider } from './contexts/ViewContext'
+import { DialogProvider } from './contexts/DialogContext'
 
 import TimelineRuler from './components/Timeline/TimelineRuler'
 import Playhead from './components/Timeline/Playhead'
@@ -84,7 +85,11 @@ const ProjectTimeline = () => {
                 color={track.color}
                 height={track.height}
               >
-                <Waveform src={track.src} sensitivity={track.transientSensitivity || 1.0} />
+                <Waveform
+                  src={track.src}
+                  sensitivity={track.transientSensitivity || 1.0}
+                  offset={track.offset || 0}
+                />
               </TrackLane>
             );
           }
@@ -100,7 +105,9 @@ function App() {
     <ProjectProvider>
       <PlayerProvider>
         <ViewProvider>
-          <ProjectTimeline />
+          <DialogProvider>
+            <ProjectTimeline />
+          </DialogProvider>
         </ViewProvider>
       </PlayerProvider>
     </ProjectProvider>

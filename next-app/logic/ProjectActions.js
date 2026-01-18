@@ -1,5 +1,8 @@
 import { useProject } from '../contexts/ProjectContext';
 
+// Actions
+const API_BASE = '/api';
+
 export const useProjectActions = () => {
     const { addAudioTrack } = useProject();
 
@@ -16,7 +19,7 @@ export const useProjectActions = () => {
                     formData.append('file', track.file);
 
                     try {
-                        const uploadRes = await fetch('http://localhost:3001/api/projects/upload', {
+                        const uploadRes = await fetch(`${API_BASE}/projects/upload`, {
                             method: 'POST',
                             body: formData
                         });
@@ -39,7 +42,7 @@ export const useProjectActions = () => {
             // Create new data object with processed tracks
             const dataToSave = { ...projectData, tracks: processedTracks };
 
-            const res = await fetch('http://localhost:3001/api/projects/save', {
+            const res = await fetch(`${API_BASE}/projects/save`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ name, data: dataToSave })
@@ -52,7 +55,7 @@ export const useProjectActions = () => {
 
     const loadProject = async (path) => {
         try {
-            const res = await fetch('http://localhost:3001/api/projects/load', {
+            const res = await fetch(`${API_BASE}/projects/load`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ path })
@@ -79,14 +82,15 @@ export const useProjectActions = () => {
 
     const getSettings = async () => {
         try {
-            const res = await fetch('http://localhost:3001/api/settings');
+            const res = await fetch(`${API_BASE}/settings`);
+            if (!res.ok) return {};
             return await res.json();
         } catch (e) { console.error(e); return {}; }
     };
 
     const saveSettings = async (settings) => {
         try {
-            const res = await fetch('http://localhost:3001/api/settings', {
+            const res = await fetch(`${API_BASE}/settings`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(settings)
@@ -97,14 +101,14 @@ export const useProjectActions = () => {
 
     const getProjects = async () => {
         try {
-            const res = await fetch('http://localhost:3001/api/projects');
+            const res = await fetch(`${API_BASE}/projects`);
             return await res.json();
         } catch (e) { console.error(e); return []; }
     };
 
     const getRecentProjects = async () => {
         try {
-            const res = await fetch('http://localhost:3001/api/projects/recent');
+            const res = await fetch(`${API_BASE}/projects/recent`);
             return await res.json();
         } catch (e) { console.error(e); return []; }
     };
